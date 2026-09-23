@@ -9,12 +9,8 @@ to place change objects. The generator writes the point labels for you.
 **Two different picking tasks:** first click **objects to remove**; later click
 **ground locations where objects should be placed**.
 
-> These are real Open3D viewport captures rendered from preserved clouds and labels,
-> not a recording of a new annotation session. The cleanup example reconstructs
-> retained tracks from 100 posed frames and compares them with preserved cleaned scans;
-> it does not recover the owner's historical clicks or establish motion ground truth.
-> The final image reconstructs saved changes, not the unsaved placement preview.
-> Source data and labels were opened read-only.
+> Images illustrate the workflow using saved data and reconstructed cleanup
+> examples, rather than a recorded annotation session.
 
 ## Before you start
 
@@ -34,6 +30,9 @@ are float32 XYZI, with one row-major 3×4 pose per frame. For PCD input set
 The launcher opens a container and prints a **new host output directory**. Keep
 that path: `/output` below refers to it. Run the following commands **inside that
 container**, one at a time. Your input is mounted read-only at `/input`.
+
+Press **Q** to continue or accept a review. **X** or closing a review cancels;
+previously saved output is retained.
 
 | Command | What happens | Your job |
 | --- | --- | --- |
@@ -57,8 +56,6 @@ unassigned points. Cluster colors repeat; they do not identify object classes.
 the remaining frames. There is no need to select anything in this preview.
 
 **Wait for:** the terminal's `Labeled … scans` message and `Next:` command.
-Outputs are `instance_labels/sequence_000/travel_btms/` (ground) and
-`travel_aos/` (instances). Do not start preparation before labeling finishes.
 
 ## 2. Remove unwanted moving objects
 
@@ -91,10 +88,7 @@ Press **Q** to open the review. This first **Q does not confirm deletion**.
 
 ![Same accumulated submap with the two selected residual tracks highlighted red](assets/pseudo-guide/trace-cleanup-final/03-traces-selected.png)
 
-*Same crop and camera. Red marks the selected accumulated tracks. They were
-retained by this 100-frame tracking replay, while over 97% of their points are
-absent within 5 cm of the corresponding preserved cleaned scans. This supports
-the cleanup example, but is not a saved record of the original manual selection.*
+*Same crop and camera, with selected tracks highlighted in red.*
 
 **Look for:** red = remove; gray = keep.
 
@@ -103,17 +97,14 @@ the cleanup example, but is not a saved record of the original manual selection.
 - Finished removing objects? In the next picking window select **nothing**, press
   **Q**, then press **Q** again in `Finish removal?`.
 
-Confirmed batches cannot be individually undone. Closing a review or pressing
-**X** cancels the run; it does not mean “accept.” Original input files are never deleted.
+Confirmed batches cannot be individually undone.
 
 ### C. Check what remains after removing the traces
 
 ![Same submap crop after excluding the two selected tracks: surrounding ground and static candidates remain](assets/pseudo-guide/trace-cleanup-final/03b-traces-removed.png)
 
-The selected traces are gone; surrounding points remain. This is an in-memory
-removal replay for the guide, not an overwrite of the source or prepared dataset.
-In the actual workflow, repeat selection if more unwanted traces remain, then
-finish removal with **no selected points → Q → Q**.
+The selected traces are gone; surrounding points remain. Repeat selection if
+more unwanted traces remain, then finish removal as described above.
 
 ## 3. Approve the static map — same command, new window
 
@@ -126,17 +117,6 @@ and opens this preview:
 remain. **Do:** press **Q** to accept the prepared map.
 
 **Wait for:** preparation to finish and print the generation `Next:` command.
-The prepared directory contains:
-
-```text
-prepared/sequence_000/
-├── hd_removed_map/hd_removed_map.pcd
-├── hd_removed_scans/
-└── dense_object_database/          # Objects available for later placement
-```
-
-The object database must not be empty. Very short recordings may not produce
-objects that pass the size and point-count filters.
 
 ## 4. Pick placement locations — click the ground this time
 
@@ -162,8 +142,8 @@ locations to see both types. You do not choose change types by clicking colors.
 
 ![Saved change example: prepared map with removed-change points in red and added-change points in blue](assets/pseudo-guide/05-saved-changes.png)
 
-*Read-only reconstruction from a saved submap and one scan. Per-scan collision
-filtering means saved geometry can differ from the all-object placement preview.*
+*Saved changes in one submap and scan; filtering can make the saved result
+differ from the placement preview.*
 
 **Look for:**
 
@@ -174,8 +154,7 @@ filtering means saved geometry can differ from the all-object placement preview.
 | Green / gray | Ground / non-ground display colors | Not change-label classes |
 
 Press **Q** in the combined preview to **save the whole chunk**. Press **R** to
-discard the draft and choose locations again. **X** or closing the review cancels
-without exporting this draft; earlier exported chunks remain.
+discard the draft and choose locations again.
 
 The terminal shows export progress. Wait for it to finish. For longer recordings,
 the placement window opens again for the next 100-frame chunk.
@@ -190,17 +169,5 @@ Const_pseudo_dataset/sequences/sequence_000/
     └── map_labels/static.label
 ```
 
-The terminal prints the actual output path. Existing output sequences cause a
-fresh generation directory to be allocated; never assume a retry overwrote the
-previous result. Create your own train/validation splits before training.
-
-## If you get stuck
-
-| Symptom | What to do |
-| --- | --- |
-| Terminal is busy but no viewer is open | Tracking, map building or export may still be running; watch its progress |
-| Q opens another screen | Picking and review are separate: Q first reviews, then Q confirms |
-| I only got one object | Pick several points before leaving the placement window |
-| I only got a blue object | One location always produces an added object |
-| Preparation created a retry directory | Use its printed `Next:` command, not the old config |
-| I closed a review and got `Cancelled by user` | Closing means cancel; use Q to accept |
+Use the output path printed in the terminal. Before training, configure your
+train/validation splits as described in the [README](../README.md#option-b--generate-your-own-pseudo-dataset).

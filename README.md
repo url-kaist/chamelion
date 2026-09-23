@@ -9,7 +9,8 @@ IEEE Robotics and Automation Letters, 2026
 
 [![Paper](https://img.shields.io/badge/Paper-RA--L_2026-2563eb)](https://doi.org/10.1109/LRA.2026.3665079)
 [![Project](https://img.shields.io/badge/Project-Website-0d9488)](https://chamelion-pages.github.io/)
-[![Dataset](https://img.shields.io/badge/Dataset-Hugging_Face_(private)-eab308)](https://huggingface.co/datasets/se0yeon00/Const_pseudo_dataset)
+[![Dataset](https://img.shields.io/badge/Dataset-Hugging_Face-eab308)](https://huggingface.co/datasets/se0yeon00/Const_pseudo_dataset)
+[![Weights](https://img.shields.io/badge/Weights-Hugging_Face-eab308)](https://huggingface.co/se0yeon00/Chamelion)
 
 [Setup](#-setup) · [Dataset](#-dataset) · [Training](#-training) · [Inference](#-inference)
 
@@ -21,21 +22,16 @@ Detect added and removed objects by comparing LiDAR scans with a prior map.
 
 ## 🚀 Setup
 
-Clone the repository:
+Requires Linux, an NVIDIA GPU, and Docker with GPU support. Run all host commands
+from the repository root after cloning:
 
 ```bash
 git clone --branch main --recurse-submodules https://github.com/url-kaist/chamelion.git
 cd chamelion
-```
-
-**Training requirements:** Linux, an NVIDIA GPU, and Docker with GPU support.
-
-```bash
 ./scripts/build.sh
 ```
 
-This builds **`chamelion:train-cu128`** for training and checkpoint evaluation.
-Pseudo generation uses its own container, built below.
+This builds `chamelion:train-cu128` for training and inference.
 
 ## 📦 Dataset
 
@@ -43,8 +39,6 @@ Choose how you want to prepare your data:
 
 - **[Download the prepared pseudo dataset](#option-a--download-the-pseudo-dataset)** to start training with our supplied splits.
 - **[Generate your own pseudo dataset](#option-b--generate-your-own-pseudo-dataset)** from LiDAR clouds and matching poses.
-
-Once your dataset is ready, continue to [Training](#-training) or [Inference](#-inference).
 
 ### Option A — Download the pseudo dataset
 
@@ -57,35 +51,30 @@ Prepared point clouds, poses and labels. Approximately **3.61 GiB**; no pseudo g
 | Validation | 12 | 1,158 |
 | Test (Const-1F, Lab) | 2 | 2,296 |
 
-Access is currently restricted to authorized Hugging Face accounts.
-
-#### Download
-
 ```bash
 pip install huggingface_hub
-hf auth login
 ```
 
-Run this Python snippet with a **new destination** to preserve existing datasets:
+Download to a new directory. No login, conversion, or renaming is needed:
 
 ```python
-from pathlib import Path
 from huggingface_hub import snapshot_download
 
-destination = Path("/path/to/Const_pseudo_dataset")
-if destination.exists():
-    raise FileExistsError("Choose a new destination")
-
-repo = "se0yeon00/Const_pseudo_dataset"
-snapshot_download(repo, repo_type="dataset", local_dir=destination)
+snapshot_download(
+    repo_id="se0yeon00/Const_pseudo_dataset",
+    repo_type="dataset",
+    local_dir="/path/to/Const_pseudo_dataset",
+)
 ```
 
-Keep `checksums.json`, `splits/` and `sequences/` together. Use the Chamelion
-point-cloud loader, not the tabular `load_dataset()` API.
+Use `/path/to/Const_pseudo_dataset/sequences` for [Training](#-training)
+or [Inference](#-inference). The supplied configuration selects the training
+and validation splits; test data is excluded from training.
 
-#### Prepare the dataset
+<details>
+<summary>Dataset structure and label format</summary>
 
-The download is ready to use. No renaming or conversion is needed:
+Keep `checksums.json`, `splits/` and `sequences/` together:
 
 ```text
 Const_pseudo_dataset/
@@ -100,10 +89,7 @@ Const_pseudo_dataset/
         └── map_labels/static.label
 ```
 
-Use `sequences/` as the dataset path in the commands below. Each submap has one
-`map_labels/static.label`. The supplied train/validation splits are selected by
-[`config/cham.yaml`](config/cham.yaml); test data is not used for training.
-
+Each submap has one shared map label file, `map_labels/static.label`.
 Each scan has a label file with the same filename stem. Labels are binary `int32`,
 one per point in cloud order:
 
@@ -119,17 +105,17 @@ row-major 3×4 local-to-global transform (12 numbers). Scan `000123.pcd` uses
 pose row 123, counting from zero. Keep scan numbers and pose rows unchanged,
 even when using only part of a sequence.
 
-Ready to use the downloaded data? Skip Option B and continue to [Training](#-training).
+</details>
 
 <a id="-generate-your-own-data"></a>
 
 ### Option B — Generate your own pseudo dataset
 
-Start with **LiDAR clouds + matching `poses.txt`**. The workflow uses the pinned
-[TRAVEL](https://github.com/url-kaist/TRAVEL) submodule and includes human selection.
+Start with **LiDAR clouds + matching `poses.txt`**. This interactive workflow uses
+the [TRAVEL](https://github.com/url-kaist/TRAVEL) submodule and a Linux graphical
+desktop with Docker and `xauth`.
 
-**First time? [Follow the screenshot walkthrough →](docs/pseudo_generation_visual_guide.md)**<br>
-See what each window means, what to click, when to press Q, and which files are saved.
+**[Screenshot walkthrough →](docs/pseudo_generation_visual_guide.md)**
 
 [![Example saved pseudo changes: blue added points and red removed points](docs/assets/pseudo-guide/05-saved-changes.png)](docs/pseudo_generation_visual_guide.md)
 
@@ -137,40 +123,40 @@ See what each window means, what to click, when to press Q, and which files are 
 **1. Prepare the input**
 
 ```text
-source_dataset/                  # Dataset root: pass this path to the launcher
-└── sequences/                   # Collection of recording sessions
-    └── my_sequence/             # One recording session; choose your own name
-        ├── poses.txt            # One sensor-to-world pose per frame
-        └── clouds/              # Raw clouds in sensor coordinates
+source_dataset/
+└── sequences/
+    └── my_sequence/
+        ├── poses.txt
+        └── clouds/
             ├── 000000.bin
             ├── 000001.bin
             └── …
 ```
 
-The default is float32 XYZI `.bin` clouds, numbered contiguously from zero.
-Poses are row-major 3×4 transforms (12 numbers per row). `000000.bin` uses the
-first row of `poses.txt`, `000001.bin` uses the second, and so on. Keep one pose
-row per cloud; both must describe the same recording session.
-For PCD input, put `000000.pcd`, `000001.pcd`, … in `clouds/` and set
-`load_dataset.is_bin: false` in `/output/generator.yaml` before step 3.
+Use sensor-coordinate float32 XYZI `.bin` clouds, numbered from zero without gaps.
+Each line of `poses.txt` is a row-major 3×4 sensor-to-world transform (12 numbers),
+matching the cloud with that frame number. No input labels are needed.
 
-You can place multiple sessions under `sequences/`, each with its own `poses.txt`
-and `clouds/`. The launcher processes **one session at a time**. No input labels
-are required.
+<details>
+<summary>PCD input or multiple recording sessions</summary>
+
+For PCD input, use `000000.pcd`, `000001.pcd`, … in `clouds/` and set
+`load_dataset.is_bin: false` in `/output/generator.yaml` before step 3.
+Each recording session gets its own folder under `sequences/`, with its own
+`poses.txt` and `clouds/`. Process one session at a time.
+
+</details>
 
 **2. Build and open the GUI container**
-
-Use a Linux graphical desktop with Docker and `xauth`:
 
 ```bash
 bash scripts/build.sh pseudo
 bash scripts/generate.sh /path/to/source_dataset my_sequence
 ```
 
-The first argument is the folder **containing `sequences/`**, not the session
-folder or `clouds/`. The second is the session folder name, here `my_sequence`.
-Inside the container, that root is mounted at `/input` (read-only).
-The launcher prints a new host output directory, mounted at `/output`.
+Pass the folder **containing `sequences/`**, followed by the session name.
+Inputs are read-only. The launcher prints a fresh output directory on the host;
+inside the container it is `/output`.
 
 **3. Run these commands inside the container, one at a time**
 
@@ -195,29 +181,16 @@ python3 pseudo_generator/generate_changes.py /output/generator.yaml
 
 🟢 Ground · ⚪ Non-ground · 🔵 Added objects · 🔴 Removed objects
 
-The generated dataset is saved under `/output/Const_pseudo_dataset/`:
+**4. Use the generated dataset**
 
-```text
-Const_pseudo_dataset/
-└── sequences/sequence_000/       # Output sequence name, independent of input name
-    ├── poses.txt
-    └── submaps/submap_000/       # A local map built from a group of frames
-        ├── prior_map.pcd
-        ├── scans/               # Generated per-frame clouds in world coordinates
-        ├── scan_labels/         # Matching per-point labels for each scan
-        └── map_labels/static.label  # One shared map label file for this submap
-```
+Output is saved to `/output/Const_pseudo_dataset/`, using the same structure as
+Option A. Train on its **host-side `sequences/` directory**, not the input `clouds/`.
 
-A sequence can contain multiple submaps. Each submap pairs a prior map with
-its scans and labels. Input `clouds/` holds raw recordings; output `scans/`
-holds generated training examples. They are separate datasets.
-Use the saved dataset's `sequences/` directory as the training input, not the
-original clouds or intermediate preparation files.
-For your generated data, create train/validation split files with one submap path
-per line, such as `sequence_000/submaps/submap_000`. Set `training.train_split`
-and `training.val_split` in `config/cham.yaml` to those files (paths are relative
-to the config). Keep each source session in only one split. The bundled splits
-refer to the downloaded dataset, not your new output.
+Create train/validation split files listing one submap per line, for example
+`sequence_000/submaps/submap_000`. Point `training.train_split` and
+`training.val_split` in [`config/cham.yaml`](config/cham.yaml) to these files
+(paths are relative to the config). Keep each source session in only one split;
+the bundled splits apply only to the downloaded dataset.
 
 ## 🏋️ Training
 
@@ -240,10 +213,8 @@ Inference settings are in [`config/inference.yaml`](config/inference.yaml).
 
 ### Pretrained weights
 
-Download from **[se0yeon00/Chamelion on Hugging Face](https://huggingface.co/se0yeon00/Chamelion)**
-(currently private; run `hf auth login` with an authorized account).
-
-Run from the repository root:
+Download the public [pretrained weights](https://huggingface.co/se0yeon00/Chamelion)
+and matching inference settings from the repository root. No login is needed:
 
 ```python
 from huggingface_hub import hf_hub_download
@@ -252,7 +223,7 @@ for filename in ("chamelion_pretrained.pt", "inference.yaml"):
     hf_hub_download("se0yeon00/Chamelion", filename, local_dir="pretrained")
 ```
 
-### Evaluate, then view saved results
+### Run on Const-1F
 
 ```bash
 CHAMELION_DATASET_PATH=/path/to/Const_pseudo_dataset/sequences \
@@ -263,34 +234,43 @@ bash scripts/evaluate.sh pretrained/chamelion_pretrained.pt \
   --sequence sequence_005/submaps/submap_000
 ```
 
-Results are saved under `new_test_run/results/`, including metrics, frame previews
-and the final map (`final_map.npz` and `final_map.png`). Use `--save-all-frames`
-to save every frame for viewing.
+Results are saved under `new_test_run/results/`: metrics, frame previews, and
+the final map (`final_map.npz` and `final_map.png`).
 
-Build the optional viewer image once, then open the results on a Linux desktop:
+<details>
+<summary>Optional: view saved results</summary>
+
+On a Linux graphical desktop with `xauth`, build the viewer once and open the results:
 
 ```bash
 bash scripts/build.sh viewer
 bash scripts/view.sh evaluation /path/to/new_test_run/results
 ```
 
-The Polyscope viewer switches between **Input**, **Prediction**, **Ground truth**
-and **Errors**. Viewing saved results does not run the model or use CUDA.
+The Polyscope viewer shows **Input**, **Prediction**, **Ground truth**, and
+**Errors** without rerunning inference. Add `--save-all-frames` to the evaluation
+command if you want to save every frame for viewing.
 
-### Interactive inference without labels
+</details>
 
-Provide a global-coordinate prior map, numeric PCD scans and their full pose table:
+<details>
+<summary>Optional: interactive inference on your own data (no labels needed)</summary>
 
-This tool shows **single-frame predictions**, without map accumulation.
+Provide a global-coordinate prior map, numbered PCD scans, and their full pose
+table. Requires a Linux graphical desktop with `xauth` and an NVIDIA GPU.
+This viewer runs **single-frame predictions**, without map accumulation.
 
 ```bash
-bash scripts/view.sh inference /path/to/model.ckpt \
+bash scripts/build.sh viewer
+bash scripts/view.sh inference pretrained/chamelion_pretrained.pt \
   /path/to/prior_map.pcd /path/to/scans /path/to/poses.txt global
 ```
 
 Use `global` for the released dataset's scans, or `local` for sensor-coordinate
 scans. No GT labels are required. Select a frame, click **Run inference on this
 frame**, then **Save prediction**. The launcher prints the output directory.
+
+</details>
 
 ## 📄 Citation
 
@@ -315,4 +295,4 @@ We thank [MapMOS](https://github.com/PRBonn/MapMOS) and
 
 Chamelion is distributed under the [GNU General Public License v3.0 or later](LICENSE)
 (`GPL-3.0-or-later`). Third-party components retain their original license notices.
-Datasets and pretrained weights have separate licensing terms.
+Datasets and pretrained weights use [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/).
