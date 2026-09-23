@@ -1,0 +1,43 @@
+# Paths are container paths. The Docker launcher mounts host directories here.
+paths:
+  data: /data/Const_pseudo_dataset/sequences
+  cache: /output/cache_no_visibility
+  logs: /output/models
+
+data:
+  deskew: False
+  max_range: 100.0
+  min_range: 0.0
+
+# odometry:
+#   voxel_size: 0.5
+#   max_points_per_voxel: 20
+#   initial_threshold: 2.0
+#   min_motion_th: 0.1
+
+mos:
+  voxel_size_mos: 0.1
+  delay_mos: 10
+  max_range_mos: 50.0
+  min_range_mos: 0.0
+  voxel_size_belief: 0.25
+  max_range_belief: 150
+
+training:
+  id: "chamelion_const_pseudo_no_visibility"
+  train_split: ../splits/train.txt
+  val_split: ../splits/val.txt
+  batch_size: 2
+  accumulate_grad_batches:  1
+  max_epochs: 50
+  lr: 0.0001
+  lr_epoch: 1
+  lr_decay: 0.99
+  weight_decay: 0.0001
+  num_workers: 4
+  dataloader: cham
+  seed: 66
+  accelerator: gpu
+  devices: 1
+  precision: 32-true
+  log_every_n_steps: 50

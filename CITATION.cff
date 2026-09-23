@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use Chamelion, please cite the preferred publication below."
+title: "Chamelion"
+type: software
+repository-code: "https://github.com/url-kaist/chamelion"
+authors:
+  - family-names: Jang
+    given-names: Seoyeon
+preferred-citation:
+  title: "Chamelion: Reliable Change Detection for Long-Term LiDAR Mapping in Transient Environments"
+  doi: "10.1109/LRA.2026.3665079"
+  year: 2026
+  type: article
+  journal: "IEEE Robotics and Automation Letters"
+  authors:
+    - family-names: Jang
+      given-names: Seoyeon
+    - family-names: Lee
+      given-names: Alex Junho
+    - family-names: Nahrendra
+      given-names: I Made Aswin
+    - family-names: Myung
+      given-names: Hyun
+references:
+  - type: article
+    title: "Building Volumetric Beliefs for Dynamic Environments Exploiting Map-Based Moving Object Segmentation"
+    doi: "10.1109/LRA.2023.3292583"
+    year: 2023
+    journal: "IEEE Robotics and Automation Letters (RA-L)"
+    url: https://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/mersch2023ral.pdf
+    authors:
+      - family-names: Mersch
+        given-names: Benedikt
+      - family-names: Guadagnino
+        given-names: Tiziano
+      - family-names: Chen
+        given-names: Xieyuanli
+      - family-names: Vizzo
+        given-names: Ignacio
+      - family-names: Behley
+        given-names: Jens
+      - family-names: Stachniss
+        given-names: Cyrill

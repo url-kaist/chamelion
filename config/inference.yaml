@@ -1,0 +1,14 @@
+# Inference-only settings copied from the historical custom/LiSTA configurations.
+# No training settings are changed and no thresholds are fitted to this test run.
+protocol: historical_b4d67f7
+profiles:
+  custom:
+    scan_confidence_threshold: 0.9
+    map_confidence_threshold: 0.5
+    belief_voxel_size: 0.25
+    max_z: 1.5
+  lista:
+    scan_confidence_threshold: 0.3
+    map_confidence_threshold: 0.2
+    belief_voxel_size: 0.1
+    max_z: 30.0

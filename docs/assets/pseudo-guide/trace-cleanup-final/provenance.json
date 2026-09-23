@@ -1,0 +1,19 @@
+{
+    "frames": [
+        0,
+        99
+    ],
+    "selected_tracks": [
+        6,
+        28
+    ],
+    "method":
+        "Existing tracking code, 100 real posed frames, retained candidates accumulated without synthetic points",
+    "selection_basis":
+        "97.24% and 99.93% of these track points are over 5 cm from their corresponding preserved cleaned scans",
+    "limits":
+        "Reconstructed removal example, not recovered click history or independently verified motion ground truth",
+    "display":
+        "Fixed-camera spatial crop; ground added for context. Production picking view shows candidates only.",
+    "source_modified": false
+}

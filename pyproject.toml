@@ -1,0 +1,48 @@
+[project]
+name = "chamelion"
+version = "1.0.0"
+description = "Chamelion: point-cloud change detection with prior maps"
+requires-python = ">=3.10"
+readme = "README.md"
+authors = [
+    { name = "Benedikt Mersch", email = "benedikt.mersch@gmail.com" },
+]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
+dependencies = [
+    "numpy",
+    "PyYAML",
+    "pydantic>=2",
+    "pydantic-settings",
+    "tqdm",
+    "typer>=0.9",
+    "diskcache>=5.3.0",
+    "pytorch_lightning>=1.6.4",
+    "scipy",
+    "tensorboard",
+    "torch",
+    "open3d>=0.18",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+viewer = ["polyscope==2.4.0"]
+pseudo = ["trimesh", "pandas", "matplotlib", "scikit-learn", "filterpy", "opencv-python"]
+
+[project.urls]
+Homepage = "https://github.com/url-kaist/chamelion"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.format]
+max-line-length = "100"

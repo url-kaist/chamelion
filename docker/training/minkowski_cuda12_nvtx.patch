@@ -1,0 +1,14 @@
+diff --git a/src/3rdparty/concurrent_unordered_map.cuh b/src/3rdparty/concurrent_unordered_map.cuh
+--- a/src/3rdparty/concurrent_unordered_map.cuh
++++ b/src/3rdparty/concurrent_unordered_map.cuh
+@@ -17,7 +17,9 @@
+ #ifndef CONCURRENT_UNORDERED_MAP_CUH
+ #define CONCURRENT_UNORDERED_MAP_CUH
+ 
+-#include <cudf/detail/nvtx/ranges.hpp>
++// CUDA 12 ships NVTX3 through CUB. The bundled cuDF NVTX3 header is an older
++// duplicate and creates ambiguous nvtx3 symbols, so profiling is disabled.
++#define CUDF_FUNC_RANGE()
+ #include <hash/hash_allocator.cuh>
+ #include <hash/helper_functions.cuh>
+ #include <hash/managed.cuh>

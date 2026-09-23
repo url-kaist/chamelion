@@ -1,0 +1,53 @@
+# Chamelion training and fixed-pose checkpoint evaluation.
+FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG MAX_JOBS=2
+ARG TORCH_CUDA_ARCH_LIST="8.6;8.9;12.0"
+ARG MINKOWSKI_ENGINE_REF=829bf19859c650776f9466dd2b14b44a91eb1fa9
+ENV CUDA_HOME=/usr/local/cuda PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
+    PATH=/opt/venv/bin:$PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 python3.10-dev python3.10-venv build-essential git ca-certificates \
+    libopenblas-dev ninja-build \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3.10 -m venv /opt/venv
+RUN python -m pip install pip==24.3.1 setuptools==69.5.1 wheel==0.45.1 \
+    && python -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
+COPY docker/training/requirements.txt /tmp/requirements.txt
+RUN python -m pip install --timeout 120 --retries 5 -r /tmp/requirements.txt
+
+# Same CUDA-12-compatible source and NVTX fix as the verified training environment.
+# No local image, third-party workspace, pretrained model or dataset is copied.
+COPY docker/training/minkowski_cuda12_nvtx.patch /tmp/minkowski_cuda12_nvtx.patch
+RUN sed -i 's/auto __raw = __to_address(__r.get());/auto __raw = std::__to_address(__r.get());/' \
+        /usr/include/c++/11/bits/shared_ptr_base.h \
+    && grep -Fq 'auto __raw = std::__to_address(__r.get());' /usr/include/c++/11/bits/shared_ptr_base.h \
+    && git clone https://github.com/CiSong10/MinkowskiEngine.git /build/MinkowskiEngine \
+    && git -C /build/MinkowskiEngine checkout --detach "${MINKOWSKI_ENGINE_REF}" \
+    && git -C /build/MinkowskiEngine apply /tmp/minkowski_cuda12_nvtx.patch \
+    && cd /build/MinkowskiEngine \
+    && MAX_JOBS="${MAX_JOBS}" TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
+        python setup.py bdist_wheel --force_cuda --blas=openblas \
+    && python -m pip install --no-deps dist/*.whl
+
+FROM nvidia/cuda:12.8.1-base-ubuntu22.04 AS runtime
+ARG DEBIAN_FRONTEND=noninteractive
+ENV PATH=/opt/venv/bin:$PATH OMP_NUM_THREADS=8 PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/workspace/chamelion/src \
+    LD_LIBRARY_PATH=/opt/venv/lib/python3.10/site-packages/torch/lib:/opt/venv/lib/python3.10/site-packages/nvidia/cusparse/lib:/opt/venv/lib/python3.10/site-packages/nvidia/nvjitlink/lib:${LD_LIBRARY_PATH}
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 ca-certificates libopenblas0-pthread libgomp1 libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /opt/venv /opt/venv
+WORKDIR /workspace/chamelion
+COPY src src
+COPY scripts scripts
+COPY config config
+COPY splits splits
+RUN python -m pip check \
+    && python -c "import torch, MinkowskiEngine, open3d, pytorch_lightning; from chamelion.training.module import TrainingModule" \
+    && python -m chamelion.training.train --help
+CMD ["python", "-m", "chamelion.training.train", "--help"]

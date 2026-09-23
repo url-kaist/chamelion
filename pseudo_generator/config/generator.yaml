@@ -1,0 +1,18 @@
+# Paths are relative to the directory where the command is run.
+dataset_type: kitti
+travel_config: travel_demo.yaml
+load_dataset:
+  dataset_root: /path/to/source_dataset
+  seq: source_sequence
+  pred_inst_root: artifacts/instance_labels
+  pred_inst_sequence: sequence_000
+  pred_save_dir: artifacts/prepared/sequence_000
+  apply_pose: true
+  correct_scan: false
+  is_bin: true
+  is_semantic: false
+  is_estimated_inst: true
+  is_calib: false
+output_dataset:
+  root: Const_pseudo_dataset
+  sequence: sequence_000

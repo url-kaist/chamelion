@@ -1,0 +1,8 @@
+{
+    "kind": "Read-only Open3D viewport captures, not a live interaction recording",
+    "removal_example":
+        "Superseded single-frame images moved out of public docs; see trace-cleanup-final/provenance.json for the accumulated cleanup example",
+    "saved_scan": "000002",
+    "added_points": 1436,
+    "removed_points": 68712
+}

@@ -1,0 +1,54 @@
+# Reproducible small generation example. No existing pseudo labels are read.
+input:
+  cloud_format: bin_xyzi  # bin_xyzi, bin_xyz, pcd, ply
+  start: 0
+  frames: 5
+  stride: 1
+preprocessing:
+  normalize_orientation: true
+  max_height: 1.5
+travel:
+  ground:
+    min_range: 0.5
+    max_range: 50.0
+    resolution: 6.0
+    num_iter: 3
+    num_lpr: 5
+    num_min_pts: 10
+    th_seeds: 0.5
+    th_dist: 0.2
+    th_outlier: 0.3
+    th_normal: 0.940
+    th_weight: 100.0
+    th_lcc_normal: 0.03
+    th_lcc_planar: 0.1
+    th_obstacle: 0.1
+    refine_mode: true
+  objects:
+    vert_scan: 64
+    horz_scan: 1024
+    min_range: 0.5
+    max_range: 50.0
+    min_vert_angle: -45.0
+    max_vert_angle: 45.0
+    horz_merge_thres: 0.2
+    vert_merge_thres: 0.5
+    vert_scan_size: 10
+    horz_scan_size: 20
+    horz_extension_size: 10
+    horz_skip_size: 20
+    downsample: 1
+    min_cluster_size: 10
+    max_cluster_size: 30000
+    seed: 66
+generation:
+  sequence: sequence_000
+  map_voxel_size: 0.1
+  object_min_points: 30
+  object_max_extent: 3.0
+  # Eligible first-frame objects, ranked by descending point count then cluster ID.
+  object_rank: 0
+  # Explicit translations in the global map axes, in metres.
+  added_offset: [2.0, 0.0, 0.0]
+  removed_offset: [-2.0, 0.0, 0.0]
+  # The demo replays a fixed placement; it does not simulate sensor occlusion.
