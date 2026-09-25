@@ -35,6 +35,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
 from chamelion.config import load_config
 from chamelion.datasets.chamelion_dataset import ChamelionDataModule
+from chamelion.training.checkpoint_io import SafeCheckpointIO
 from chamelion.training.module import TrainingModule
 from chamelion.utils.seed import set_seed
 
@@ -72,7 +73,7 @@ def train(
         "--resume",
         exists=True,
         dir_okay=False,
-        help="Resume model, optimizer and epoch state from a trusted Lightning .ckpt",
+        help="Resume full training state from a tensor/primitive-only Lightning .ckpt",
     ),
 ):
     cfg = load_config(config)
@@ -128,6 +129,7 @@ def train(
         "precision": cfg.training.precision,
         "log_every_n_steps": cfg.training.log_every_n_steps,
         "callbacks": [lr_monitor, scan_checkpoint_saver],
+        "plugins": [SafeCheckpointIO()],
     }
     typer.echo(f"Dataset: {data_dir}")
     typer.echo(f"Cache: {resolved_cache_dir or 'disabled'}")

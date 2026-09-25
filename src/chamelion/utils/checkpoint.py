@@ -9,11 +9,11 @@ from chamelion.models.network import ChamelionNet
 def load_model(checkpoint: Path, voxel_size: float, device: torch.device) -> ChamelionNet:
     """Load a trusted checkpoint without changing its weights or model settings.
 
-    Accept a Lightning state_dict wrapper or a bare state dict, optionally using
-    the training module's ``mos.`` prefix. Only load checkpoints you trust:
-    full Lightning checkpoints require pickle deserialization.
+    Accept a tensor-only state dict or a safe Lightning state_dict wrapper,
+    optionally using the training module's ``mos.`` prefix.
+    Unsupported Python objects are rejected, never loaded via an unsafe fallback.
     """
-    loaded = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    loaded = torch.load(checkpoint, map_location="cpu", weights_only=True)
     state_dict = loaded.get("state_dict", loaded)
     state_dict = {
         (key.removeprefix("mos.") if key.startswith("mos.") else key): value

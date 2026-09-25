@@ -47,7 +47,7 @@ from chamelion.utils.utils_dyn import *
 class TrainingModule(LightningModule):
     def __init__(self, config: ChamelionConfig):
         super().__init__()
-        self.save_hyperparameters(dict(config))
+        self.save_hyperparameters(config.model_dump(mode="json"))
         self.lr = config.training.lr
         self.lr_epoch = config.training.lr_epoch
         self.lr_decay = config.training.lr_decay
